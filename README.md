@@ -8,6 +8,15 @@
 
 **UK Market · Dec 2010 – Dec 2011 · 5,350 customers · £14.7M revenue**
 
+## 📊 Interactive Dashboard
+
+Explore the full interactive RFM & CLV dashboard:
+
+👉 **[View Live Dashboard](https://sandu17767.github.io/-RFM-Segmentation-Customer-Lifetime-Value-Analysis/dashboard.html)**
+
+---
+
+
 
 ## 📊 Key Visual Insights
 
