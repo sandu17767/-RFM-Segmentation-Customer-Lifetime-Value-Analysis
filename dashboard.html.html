@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RFM Segmentation & CLV Dashboard — UCI Online Retail UK</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+  /* HEADER */
+  .header { background: linear-gradient(135deg, #1a1d2e 0%, #16213e 100%); border-bottom: 1px solid #2d3748; padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; }
+  .header-left h1 { font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+  .header-left p { font-size: 13px; color: #718096; margin-top: 4px; }
+  .header-badge { background: #1e3a5f; border: 1px solid #2b6cb0; color: #90cdf4; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+  /* LAYOUT */
+  .main { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+
+  /* KPI CARDS */
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+  .kpi-card { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; position: relative; overflow: hidden; transition: transform 0.2s; }
+  .kpi-card:hover { transform: translateY(-2px); }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .kpi-card.blue::before { background: linear-gradient(90deg, #4299e1, #63b3ed); }
+  .kpi-card.green::before { background: linear-gradient(90deg, #48bb78, #68d391); }
+  .kpi-card.red::before { background: linear-gradient(90deg, #fc8181, #feb2b2); }
+  .kpi-card.purple::before { background: linear-gradient(90deg, #9f7aea, #b794f4); }
+  .kpi-card.amber::before { background: linear-gradient(90deg, #ed8936, #f6ad55); }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; font-weight: 600; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 6px; }
+  .kpi-sub { font-size: 12px; color: #718096; }
+  .kpi-icon { position: absolute; top: 18px; right: 18px; font-size: 22px; opacity: 0.3; }
+
+  /* CHART GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 20px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .span-full { grid-column: 1 / -1; }
+
+  /* CHART CARD */
+  .card { background: #1a1d2e; border: 1px solid #2d3748; border-radius: 12px; padding: 22px; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+  .card-title { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+  .card-subtitle { font-size: 11px; color: #718096; margin-top: 3px; }
+  .card-badge { background: #2d3748; color: #a0aec0; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .chart-wrap { position: relative; }
+
+  /* INSIGHT CALLOUT */
+  .insight { background: #1e2d3d; border-left: 3px solid #4299e1; border-radius: 0 8px 8px 0; padding: 10px 14px; margin-top: 14px; font-size: 12px; color: #90cdf4; line-height: 1.5; }
+  .insight strong { color: #63b3ed; }
+
+  /* ACTION TABLE */
+  .action-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .action-table th { background: #2d3748; color: #a0aec0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 14px; text-align: left; font-weight: 600; }
+  .action-table td { padding: 11px 14px; border-bottom: 1px solid #2d3748; vertical-align: middle; color: #cbd5e0; }
+  .action-table tr:last-child td { border-bottom: none; }
+  .action-table tr:hover td { background: #232840; }
+  .seg-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .pill-champions { background: #1a3a2a; color: #68d391; border: 1px solid #2f855a; }
+  .pill-atrisk { background: #3d1f1f; color: #fc8181; border: 1px solid #c53030; }
+  .pill-loyal { background: #2a2a1a; color: #f6e05e; border: 1px solid #975a16; }
+  .pill-potential { background: #1a2d3a; color: #63b3ed; border: 1px solid #2b6cb0; }
+  .pill-cantlose { background: #3d2a1a; color: #f6ad55; border: 1px solid #c05621; }
+  .pill-hibernating { background: #2a2a3a; color: #b794f4; border: 1px solid #6b46c1; }
+  .pill-lost { background: #2d2d2d; color: #a0aec0; border: 1px solid #4a5568; }
+  .priority-high { color: #fc8181; font-weight: 700; }
+  .priority-med { color: #f6ad55; font-weight: 700; }
+  .priority-low { color: #718096; }
+  .revenue-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .revenue-bar { height: 6px; border-radius: 3px; background: #4299e1; }
+
+  /* FOOTER */
+  .footer { text-align: center; padding: 20px; color: #4a5568; font-size: 11px; border-top: 1px solid #2d3748; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>RFM Segmentation & Customer Lifetime Value</h1>
+    <p>UCI Online Retail Dataset · UK Market · Dec 2010 – Dec 2011 · BigQuery Standard SQL + Power BI</p>
+  </div>
+  <div class="header-badge">📊 5,350 Customers · £14.7M Revenue</div>
+</div>
+
+<div class="main">
+
+  <!-- KPI CARDS -->
+  <div class="kpi-row">
+    <div class="kpi-card blue">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value">£14.7M</div>
+      <div class="kpi-sub">Dec 2010 – Dec 2011</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-icon">🏆</div>
+      <div class="kpi-label">Champion Revenue Share</div>
+      <div class="kpi-value">66.8%</div>
+      <div class="kpi-sub">1,194 customers → £9.8M</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">Revenue at Risk</div>
+      <div class="kpi-value">£2.38M</div>
+      <div class="kpi-sub">At Risk + Can't Lose Them</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-label">Total Customers</div>
+      <div class="kpi-value">5,350</div>
+      <div class="kpi-sub">UK only · post-cleaning</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-icon">📈</div>
+      <div class="kpi-label">Avg Champion CLV</div>
+      <div class="kpi-value">£5,003</div>
+      <div class="kpi-sub">Projected 12-month</div>
+    </div>
+  </div>
+
+  <!-- ROW 1: Revenue by Segment + Customer Distribution -->
+  <div class="grid-2">
+
+    <!-- Revenue by Segment -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Revenue by Segment</div>
+          <div class="card-subtitle">Total lifetime revenue — 7 segments</div>
+        </div>
+        <div class="card-badge">£14.7M total</div>
+      </div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="revenueBar"></canvas>
+      </div>
+      <div class="insight">
+        <strong>Single point of failure:</strong> Champions alone generate 66.8% of all revenue. Losing 10% of this segment removes ~£1M from the top line immediately.
+      </div>
+    </div>
+
+    <!-- Customer Count Donut -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Customer Distribution by Segment</div>
+          <div class="card-subtitle">5,350 customers across 7 segments</div>
+        </div>
+        <div class="card-badge">5,350 customers</div>
+      </div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="customerDonut"></canvas>
+      </div>
+      <div class="insight">
+        <strong>Lost is the largest segment by count</strong> (1,495 customers, 27.9%) — yet generates only 8.2% of revenue. 47% of them placed only one order.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 2: Avg CLV + Recency vs Monetary Scatter -->
+  <div class="grid-2">
+
+    <!-- Avg CLV by Segment -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Projected 12-Month CLV by Segment</div>
+          <div class="card-subtitle">Average per customer · Reliable flag: ≥ 3 active months</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="clvBar"></canvas>
+      </div>
+      <div class="insight">
+        <strong>Can't Lose Them (£5,565 avg CLV)</strong> edges out Champions — 56 customers, each worth a personal outreach. Their CLV exceeds At Risk despite far fewer customers.
+      </div>
+    </div>
+
+    <!-- Scatter: Champions vs At Risk -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Recency vs Revenue — Champions vs At Risk</div>
+          <div class="card-subtitle">Why At Risk is the highest ROI recovery opportunity</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="scatterPlot"></canvas>
+      </div>
+      <div class="insight">
+        <strong>Same revenue profile, different recency:</strong> At Risk customers spend identically to Champions (avg AOV £420 vs £421) but have been inactive 162 days on average.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: Revenue % Treemap-style + RFM Score Heatmap -->
+  <div class="grid-2">
+
+    <!-- Revenue Share Horizontal Bar -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Revenue Concentration Analysis</div>
+          <div class="card-subtitle">% of total revenue vs % of customers per segment</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="concentrationChart"></canvas>
+      </div>
+      <div class="insight">
+        <strong>The 22-67 imbalance:</strong> 22% of customers drive 67% of revenue. A healthy distribution would show closer alignment between these two bars.
+      </div>
+    </div>
+
+    <!-- Avg AOV by Segment -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Average Order Value by Segment</div>
+          <div class="card-subtitle">Reveals spend behaviour across segment types</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:280px">
+        <canvas id="aovChart"></canvas>
+      </div>
+      <div class="insight">
+        <strong>At Risk AOV (£420) matches Champions (£421)</strong> — these are not low-value customers. They are Champion-quality buyers who simply stopped purchasing.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 4: Segment Action Table (full width) -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Segment Strategy Playbook</div>
+        <div class="card-subtitle">Recommended action per segment — prioritised by commercial impact</div>
+      </div>
+      <div class="card-badge">7 segments</div>
+    </div>
+    <table class="action-table">
+      <thead>
+        <tr>
+          <th>Segment</th>
+          <th>Customers</th>
+          <th>Revenue</th>
+          <th>% Revenue</th>
+          <th>Avg CLV</th>
+          <th>Avg Recency</th>
+          <th>Priority</th>
+          <th>Recommended Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="seg-pill pill-champions">🏆 Champions</span></td>
+          <td>1,194</td>
+          <td>
+            <div class="revenue-bar-wrap">
+              £9.80M <div class="revenue-bar" style="width:100px;background:#48bb78"></div>
+            </div>
+          </td>
+          <td>66.8%</td>
+          <td>£5,003</td>
+          <td>22 days</td>
+          <td><span class="priority-high">🔴 Critical</span></td>
+          <td>VIP programme · loyalty tiers · churn alert at 60 days</td>
+        </tr>
+        <tr>
+          <td><span class="seg-pill pill-atrisk">⚠️ At Risk</span></td>
+          <td>538</td>
+          <td>
+            <div class="revenue-bar-wrap">
+              £2.20M <div class="revenue-bar" style="width:22px;background:#fc8181"></div>
+            </div>
+          </td>
+          <td>14.9%</td>
+          <td>£3,155</td>
+          <td>162 days</td>
+          <td><span class="priority-high">🔴 Urgent</span></td>
+          <td>Win-back campaign triggered at 120–150 days · history-based offer</td>
+        </tr>
+        <tr>
+          <td><span class="seg-pill pill-cantlose">🚨 Can't Lose Them</span></td>
+          <td>56</td>
+          <td>
+            <div class="revenue-bar-wrap">
+              £182K <div class="revenue-bar" style="width:2px;background:#ed8936"></div>
+            </div>
+          </td>
+          <td>1.2%</td>
+          <td>£5,565</td>
+          <td>491 days</td>
+          <td><span class="priority-high">🔴 Urgent</span></td>
+          <td>Direct personal outreach · individual offer · not email blast</td>
+        </tr>
+        <tr>
+          <td><span class="seg-pill pill-loyal">💛 Loyal</span></td>
+          <td>687</td>
+          <td>
+            <div class="revenue-bar-wrap">
+              £826K <div class="revenue-bar" style="width:8px;background:#f6e05e"></div>
+            </div>
+          </td>
+          <td>5.6%</td>
+          <td>£1,348</td>
+          <td>62 days</td>
+          <td><span class="priority-med">🟡 Grow</span></td>
+          <td>Upsell to VIP tier · cross-sell recommendations · no discounting</td>
+        </tr>
+        <tr>
+          <td><span class="seg-pill pill-potential">🌱 Potential Loyalists</span></td>
+          <td>876</td>
+          <td>
+            <div class="revenue-bar-wrap">
+              £337K <div class="revenue-bar" style="width:3px;background:#63b3ed"></div>
+            </div>
+          </td>
+          <td>2.3%</td>
+          <td>£286</td>
+          <td>67 days</td>
+          <td><span class="priority-med">🟡 Convert</span></td>
+          <td>Second-purchase trigger within 30 days · category-specific follow-up</td>
+        </tr>
+        <tr>
+          <td><span class="seg-pill pill-hibernating">💤 Hibernating</span></td>
+          <td>504</td>
+          <td>
+            <div class="revenue-bar-wrap">
+              £138K <div class="revenue-bar" style="width:1px;background:#b794f4"></div>
+            </div>
+          </td>
+          <td>0.9%</td>
+          <td>£158</td>
+          <td>324 days</td>
+          <td><span class="priority-low">⚪ Test</span></td>
+          <td>Light reactivation sequence · 2–3 emails over 30 days</td>
+        </tr>
+        <tr>
+          <td><span class="seg-pill pill-lost">❌ Lost</span></td>
+          <td>1,495</td>
+          <td>
+            <div class="revenue-bar-wrap">
+              £1.20M <div class="revenue-bar" style="width:12px;background:#718096"></div>
+            </div>
+          </td>
+          <td>8.2%</td>
+          <td>£961</td>
+          <td>461 days</td>
+          <td><span class="priority-low">⚪ Minimal</span></td>
+          <td>Annual low-cost broadcast · sunset strategy · no personalisation spend</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- end main -->
+
+<div class="footer">
+  RFM Segmentation & CLV Analysis · UCI Online Retail Dataset · UK Market · Built with BigQuery Standard SQL · Sanduni — E-Commerce Analytics Portfolio
+</div>
+
+<script>
+// ─── COLOUR PALETTE ───────────────────────────────
+const COLOURS = {
+  champions:   '#48bb78',
+  atRisk:      '#fc8181',
+  lost:        '#718096',
+  loyal:       '#f6e05e',
+  potential:   '#63b3ed',
+  cantLose:    '#ed8936',
+  hibernating: '#b794f4',
+};
+const SEG_LABELS = ['Champions','At Risk','Lost','Loyal','Potential Loyalists',"Can't Lose Them",'Hibernating'];
+const SEG_COLOURS = [COLOURS.champions, COLOURS.atRisk, COLOURS.lost, COLOURS.loyal, COLOURS.potential, COLOURS.cantLose, COLOURS.hibernating];
+
+Chart.defaults.color = '#718096';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 11;
+
+// ─── 1. REVENUE BAR ───────────────────────────────
+new Chart(document.getElementById('revenueBar'), {
+  type: 'bar',
+  data: {
+    labels: SEG_LABELS,
+    datasets: [{
+      label: 'Revenue (£)',
+      data: [9836715, 2199832, 1203781, 826441, 336855, 181547, 137976],
+      backgroundColor: SEG_COLOURS,
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => ' £' + (ctx.raw / 1000000).toFixed(2) + 'M'
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: '#2d3748' }, ticks: { maxRotation: 30 } },
+      y: {
+        grid: { color: '#2d3748' },
+        ticks: { callback: v => '£' + (v/1000000).toFixed(1) + 'M' }
+      }
+    }
+  }
+});
+
+// ─── 2. CUSTOMER DONUT ────────────────────────────
+new Chart(document.getElementById('customerDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: SEG_LABELS,
+    datasets: [{
+      data: [1194, 538, 1495, 687, 876, 56, 504],
+      backgroundColor: SEG_COLOURS,
+      borderColor: '#0f1117',
+      borderWidth: 3,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '62%',
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: { boxWidth: 12, padding: 14, font: { size: 11 } }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+            return ` ${ctx.label}: ${ctx.raw.toLocaleString()} (${(ctx.raw/total*100).toFixed(1)}%)`;
+          }
+        }
+      }
+    }
+  }
+});
+
+// ─── 3. CLV BAR ───────────────────────────────────
+new Chart(document.getElementById('clvBar'), {
+  type: 'bar',
+  data: {
+    labels: SEG_LABELS,
+    datasets: [{
+      label: 'Avg Projected CLV (£)',
+      data: [5003, 3155, 961, 1348, 286, 5565, 158],
+      backgroundColor: SEG_COLOURS,
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ' £' + ctx.raw.toLocaleString() } }
+    },
+    scales: {
+      x: { grid: { color: '#2d3748' }, ticks: { maxRotation: 30 } },
+      y: {
+        grid: { color: '#2d3748' },
+        ticks: { callback: v => '£' + (v/1000).toFixed(0) + 'K' }
+      }
+    }
+  }
+});
+
+// ─── 4. SCATTER PLOT ──────────────────────────────
+const championsScatter = [{"x":5.0,"y":45179.0},{"x":2.0,"y":43515.0},{"x":9.0,"y":40999.0},{"x":11.0,"y":40031.0},{"x":10.0,"y":40002.0},{"x":3.0,"y":38490.0},{"x":3.0,"y":38260.0},{"x":3.0,"y":36693.0},{"x":11.0,"y":35921.0},{"x":4.0,"y":35541.0},{"x":6.0,"y":34220.0},{"x":4.0,"y":33268.0},{"x":11.0,"y":32051.0},{"x":2.0,"y":31820.0},{"x":3.0,"y":30861.0},{"x":51.0,"y":30393.0},{"x":5.0,"y":29532.0},{"x":3.0,"y":28882.0},{"x":6.0,"y":28682.0},{"x":4.0,"y":27792.0},{"x":35.0,"y":27751.0},{"x":9.0,"y":26627.0},{"x":32.0,"y":26374.0},{"x":4.0,"y":26040.0},{"x":11.0,"y":25604.0},{"x":9.0,"y":25120.0},{"x":4.0,"y":24583.0},{"x":6.0,"y":24516.0},{"x":6.0,"y":24172.0},{"x":17.0,"y":24138.0},{"x":6.0,"y":23958.0},{"x":5.0,"y":22992.0},{"x":2.0,"y":22434.0},{"x":31.0,"y":22405.0},{"x":10.0,"y":22310.0},{"x":3.0,"y":22117.0},{"x":47.0,"y":22101.0},{"x":7.0,"y":22082.0},{"x":12.0,"y":21927.0},{"x":12.0,"y":21374.0},{"x":3.0,"y":20890.0},{"x":12.0,"y":20850.0},{"x":6.0,"y":20750.0},{"x":11.0,"y":20325.0},{"x":17.0,"y":19584.0},{"x":44.0,"y":19571.0},{"x":2.0,"y":18758.0},{"x":6.0,"y":18671.0},{"x":2.0,"y":18626.0},{"x":25.0,"y":18319.0},{"x":6.0,"y":18066.0},{"x":9.0,"y":17762.0},{"x":10.0,"y":17655.0},{"x":60.0,"y":17550.0},{"x":3.0,"y":17524.0},{"x":16.0,"y":17480.0},{"x":48.0,"y":17466.0},{"x":31.0,"y":17298.0},{"x":4.0,"y":17245.0},{"x":6.0,"y":17050.0},{"x":27.0,"y":17025.0},{"x":24.0,"y":16833.0},{"x":5.0,"y":16433.0},{"x":12.0,"y":16410.0},{"x":5.0,"y":16260.0},{"x":21.0,"y":16204.0},{"x":18.0,"y":16185.0},{"x":4.0,"y":16179.0},{"x":35.0,"y":16075.0},{"x":5.0,"y":15973.0},{"x":24.0,"y":15957.0},{"x":4.0,"y":15772.0},{"x":23.0,"y":15763.0},{"x":4.0,"y":15688.0},{"x":19.0,"y":15588.0},{"x":32.0,"y":15527.0},{"x":13.0,"y":14960.0},{"x":30.0,"y":14907.0},{"x":31.0,"y":14647.0},{"x":17.0,"y":14622.0},{"x":6.0,"y":14617.0},{"x":17.0,"y":14593.0},{"x":20.0,"y":14561.0},{"x":10.0,"y":14499.0},{"x":20.0,"y":14326.0},{"x":4.0,"y":14111.0},{"x":17.0,"y":14106.0},{"x":10.0,"y":14103.0},{"x":28.0,"y":14059.0},{"x":6.0,"y":14001.0},{"x":17.0,"y":13993.0},{"x":2.0,"y":13874.0},{"x":27.0,"y":13847.0},{"x":16.0,"y":13734.0},{"x":5.0,"y":13552.0},{"x":3.0,"y":13391.0},{"x":34.0,"y":13389.0},{"x":14.0,"y":13378.0},{"x":20.0,"y":13373.0},{"x":25.0,"y":13371.0}];
+
+const atRiskScatter = [{"x":89.0,"y":26279.0},{"x":140.0,"y":26259.0},{"x":66.0,"y":25265.0},{"x":72.0,"y":19787.0},{"x":308.0,"y":18410.0},{"x":61.0,"y":17629.0},{"x":86.0,"y":17360.0},{"x":115.0,"y":17335.0},{"x":146.0,"y":17250.0},{"x":165.0,"y":16644.0},{"x":102.0,"y":16250.0},{"x":159.0,"y":16246.0},{"x":117.0,"y":15601.0},{"x":100.0,"y":14762.0},{"x":62.0,"y":14050.0},{"x":258.0,"y":13781.0},{"x":219.0,"y":12824.0},{"x":111.0,"y":11313.0},{"x":65.0,"y":11285.0},{"x":384.0,"y":11123.0},{"x":90.0,"y":10755.0},{"x":74.0,"y":9972.0},{"x":174.0,"y":9962.0},{"x":75.0,"y":9962.0},{"x":266.0,"y":9925.0},{"x":198.0,"y":9839.0},{"x":208.0,"y":9565.0},{"x":110.0,"y":9435.0},{"x":124.0,"y":9275.0},{"x":102.0,"y":9188.0},{"x":86.0,"y":9087.0},{"x":91.0,"y":9060.0},{"x":75.0,"y":8999.0},{"x":283.0,"y":8483.0},{"x":402.0,"y":8377.0},{"x":125.0,"y":8112.0},{"x":68.0,"y":8013.0},{"x":69.0,"y":7992.0},{"x":125.0,"y":7891.0},{"x":122.0,"y":7795.0},{"x":186.0,"y":7794.0},{"x":86.0,"y":7669.0},{"x":62.0,"y":7587.0},{"x":128.0,"y":7336.0},{"x":68.0,"y":7310.0},{"x":88.0,"y":7194.0},{"x":68.0,"y":6979.0},{"x":75.0,"y":6948.0},{"x":194.0,"y":6881.0},{"x":101.0,"y":6863.0},{"x":150.0,"y":6714.0},{"x":72.0,"y":6710.0},{"x":65.0,"y":6702.0},{"x":73.0,"y":6613.0},{"x":90.0,"y":6594.0},{"x":67.0,"y":6588.0},{"x":61.0,"y":6586.0},{"x":121.0,"y":6520.0},{"x":82.0,"y":6516.0},{"x":76.0,"y":6502.0},{"x":68.0,"y":6486.0},{"x":241.0,"y":6461.0},{"x":90.0,"y":6415.0},{"x":83.0,"y":6392.0},{"x":320.0,"y":6273.0},{"x":80.0,"y":6271.0},{"x":84.0,"y":6264.0},{"x":130.0,"y":6104.0},{"x":62.0,"y":6031.0},{"x":139.0,"y":6017.0},{"x":241.0,"y":5989.0},{"x":128.0,"y":5985.0},{"x":117.0,"y":5956.0},{"x":66.0,"y":5954.0},{"x":107.0,"y":5862.0},{"x":107.0,"y":5860.0},{"x":66.0,"y":5745.0},{"x":66.0,"y":5729.0},{"x":74.0,"y":5676.0},{"x":133.0,"y":5635.0},{"x":412.0,"y":5625.0},{"x":292.0,"y":5606.0},{"x":68.0,"y":5580.0},{"x":110.0,"y":5524.0},{"x":177.0,"y":5505.0},{"x":304.0,"y":5370.0},{"x":107.0,"y":5346.0},{"x":97.0,"y":5257.0},{"x":75.0,"y":5232.0},{"x":63.0,"y":5231.0},{"x":109.0,"y":5201.0},{"x":158.0,"y":5126.0},{"x":90.0,"y":5071.0},{"x":84.0,"y":5053.0},{"x":70.0,"y":4919.0},{"x":335.0,"y":4905.0},{"x":207.0,"y":4895.0},{"x":171.0,"y":4878.0},{"x":293.0,"y":4854.0},{"x":83.0,"y":4838.0}];
+
+new Chart(document.getElementById('scatterPlot'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: '🏆 Champions',
+        data: championsScatter,
+        backgroundColor: 'rgba(72,187,120,0.55)',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      },
+      {
+        label: '⚠️ At Risk',
+        data: atRiskScatter,
+        backgroundColor: 'rgba(252,129,129,0.55)',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label} · Recency: ${ctx.parsed.x}d · Revenue: £${ctx.parsed.y.toLocaleString()}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#2d3748' },
+        title: { display: true, text: 'Days Since Last Purchase (Recency)', color: '#718096' },
+        ticks: { callback: v => v + 'd' }
+      },
+      y: {
+        grid: { color: '#2d3748' },
+        title: { display: true, text: 'Total Revenue (£)', color: '#718096' },
+        ticks: { callback: v => '£' + (v/1000).toFixed(0) + 'K' }
+      }
+    }
+  }
+});
+
+// ─── 5. CONCENTRATION CHART ───────────────────────
+new Chart(document.getElementById('concentrationChart'), {
+  type: 'bar',
+  data: {
+    labels: SEG_LABELS,
+    datasets: [
+      {
+        label: '% of Revenue',
+        data: [66.8, 14.9, 8.2, 5.6, 2.3, 1.2, 0.9],
+        backgroundColor: SEG_COLOURS,
+        borderRadius: 4,
+      },
+      {
+        label: '% of Customers',
+        data: [22.3, 10.1, 27.9, 12.8, 16.4, 1.0, 9.4],
+        backgroundColor: SEG_COLOURS.map(c => c + '55'),
+        borderRadius: 4,
+        borderColor: SEG_COLOURS,
+        borderWidth: 1,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, padding: 16 } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%` } }
+    },
+    scales: {
+      x: { grid: { color: '#2d3748' }, ticks: { maxRotation: 30 } },
+      y: {
+        grid: { color: '#2d3748' },
+        ticks: { callback: v => v + '%' },
+        max: 80
+      }
+    }
+  }
+});
+
+// ─── 6. AOV CHART ─────────────────────────────────
+new Chart(document.getElementById('aovChart'), {
+  type: 'bar',
+  data: {
+    labels: SEG_LABELS,
+    datasets: [{
+      label: 'Avg Order Value (£)',
+      data: [421, 420, 425, 347, 249, 436, 220],
+      backgroundColor: SEG_COLOURS,
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ' £' + ctx.raw.toLocaleString() } },
+      annotation: {}
+    },
+    scales: {
+      x: { grid: { color: '#2d3748' }, ticks: { maxRotation: 30 } },
+      y: {
+        grid: { color: '#2d3748' },
+        ticks: { callback: v => '£' + v },
+        min: 0, max: 500
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
