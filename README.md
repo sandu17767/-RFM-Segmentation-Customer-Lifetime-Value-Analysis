@@ -8,7 +8,51 @@
 
 **UK Market · Dec 2010 – Dec 2011 · 5,350 customers · £14.7M revenue**
 
+
+## 📊 Key Visual Insights
+
+### 🔥 RFM Segmentation Overview
+![RFM Heatmap](./visuals/01_rfm_score_heatmap.png)
+
+This heatmap shows how customers are distributed across recency and frequency, highlighting high-value clusters.
+
 ---
+
+### 💰 Revenue by Segment
+![Revenue](./visuals/03_revenue_by_segment.png)
+
+Champions generate 66.8% of total revenue, showing strong dependence on a small customer group.
+
+---
+
+### ⚠️ Revenue Concentration
+![Concentration](./visuals/04_revenue_concentration.png)
+
+A small percentage of customers drive the majority of revenue, creating structural risk.
+
+---
+
+### 📈 CLV by Segment
+![CLV](./visuals/05_clv_by_segment.png)
+
+Customer lifetime value varies significantly across segments, with Champions dominating long-term value.
+
+---
+
+### 🛒 Average Order Value
+![AOV](./visuals/06_avg_order_value.png)
+
+At Risk customers show similar spending behaviour to Champions, indicating recovery potential.
+
+---
+
+### 🔄 Recency vs Revenue
+![Recency](./visuals/07_recency_vs_revenue.png)
+
+Customers with high revenue but declining recency represent key churn risk.
+
+---
+
 
 
 ## 🎯 The Business Problem
