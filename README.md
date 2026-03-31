@@ -12,8 +12,7 @@
 
 Explore the full interactive RFM & CLV dashboard:
 
-👉 **[View Live Dashboard](https://sandu17767.github.io/-RFM-Segmentation-Customer-Lifetime-Value-Analysis/dashboard.html)**
-
+👉 **[View Live Interactive Dashboard](https://sandu17767.github.io/-RFM-Segmentation-Customer-Lifetime-Value-Analysis/dashboard.html)**
 ---
 
 
