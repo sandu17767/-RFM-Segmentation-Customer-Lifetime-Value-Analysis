@@ -10,7 +10,7 @@
 
 ## 📊 Interactive Dashboard
 
-Explore the full interactive RFM & CLV dashboard:
+Explore the full interactive dashboard used to analyse customer value, retention risk, and revenue concentration:
 
 👉 **[View Live Interactive Dashboard](https://sandu17767.github.io/-RFM-Segmentation-Customer-Lifetime-Value-Analysis/dashboard.html)**
 ---
